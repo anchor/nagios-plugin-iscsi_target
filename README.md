@@ -6,6 +6,8 @@ A Nagios plugin to check the reachability of an iSCSI target.
 
 The check is very basic and only attempts to ensure that the target is reachable and can be read from. The intended use case is a "dumb" initiator that has no access to the contents of the initiator, which may be a complex clustered filesystem or similar.
 
+For context surrounding the use of this check, please see the [associated blog post](http://www.anchor.com.au/blog/2013/04/nagios-checks-for-iscsi-targets-with-a-blind-initiator/).
+
 ## Usage
 
 The script takes a few arguments, also documented in the output of `--help`
