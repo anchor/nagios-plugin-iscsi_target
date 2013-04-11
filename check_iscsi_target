@@ -1,0 +1,87 @@
+#!/usr/bin/env ruby
+
+# Written by Steven McDonald for Anchor (http://www.anchor.com.au/)
+
+STATE = {
+	:OK       => 0,
+	:WARNING  => 1,
+	:CRITICAL => 2,
+	:UNKNOWN  => 3
+}
+
+require 'optparse'
+
+def main(argv)
+	opts = parse_args(argv)
+
+	message = []
+	state   = STATE[:OK]
+
+	devices = Dir.glob("/dev/disk/by-path/ip-#{opts[:address]}:#{opts[:port]}-iscsi-#{opts[:node]}-*").sort
+	if devices.length == 0
+		message.push('No matching devices found')
+		state = [state, STATE[:UNKNOWN]].max
+	end
+
+	devices.each do |d|
+		File.open(d, 'r') do |f|
+			if IO.select([f],[],[],1)
+				# This is to work around the fact that
+				# even a read_nonblock on an iSCSI device
+				# will hang when the network is
+				# unreachable. If we can't read 1 KiB
+				# within 100 ms, we consider the device
+				# dead and report a CRITICAL state.
+				child_pid = Process.fork do
+					begin
+						f.read_nonblock(1024)
+					rescue
+						exit! 1
+					end
+				end
+				sleep 0.1
+				unless s = Process.wait2(child_pid, Process::WNOHANG) and s[1].exitstatus == 0
+					Process.kill('KILL', child_pid) unless s
+					message.push("Unable to read from #{d}")
+					state = [state, STATE[:CRITICAL]].max
+				end
+			else
+				message.push("select(2) timeout on #{d}")
+				state = [state, STATE[:CRITICAL]].max
+			end
+		end
+	end
+
+	message.push('Everything looks normal') if message.length == 0
+
+	puts message.join(', ')
+	state
+end
+
+def parse_args(args)
+	opts = {
+		:node    => nil,
+		:address => nil,
+		:port    => 3260
+	}
+
+	parser = OptionParser.new
+
+	parser.banner = "Usage: #{File.basename($0)} -n node -a address [-p port]"
+	parser.on('-n', '--node NODE',
+	          'Name of the iSCSI target node') {|v| opts[:node] = v}
+	parser.on('-a', '--address ADDRESS',
+	          'IP address of the iSCSI target node') {|v| opts[:address] = v}
+	parser.on('-p', '--port PORT',
+	          'Port to connect to on the iSCSI target node') {|v| opts[:port] = v.to_i}
+	parser.on('-h', '-?', '--help', '--usage',
+	          'Display command help') {$stderr.puts parser; exit STATE[:UNKNOWN]}
+
+	parser.parse!(args)
+
+	parse_args(['--usage']) unless opts[:node] and opts[:address]
+
+	opts
+end
+
+exit main(ARGV) if $0 == __FILE__
