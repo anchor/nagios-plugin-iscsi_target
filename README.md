@@ -38,6 +38,8 @@ We're not aware of any bugs, though the script is limited by its simplicity and 
 
 * The script was written for [Open-iSCSI](http://www.open-iscsi.org/) and assumes that your initiator is already fully configured and working - this is a very high-level check.
 
+* Targets are expected to be visible under `/dev/disk/by-path/ip-$address:$port-iscsi-$iqn-*`
+
 
 ## Author
 
