@@ -47,3 +47,8 @@ We're not aware of any bugs, though the script is limited by its simplicity and 
 
 Steven McDonald, for [Anchor](http://www.anchor.com.au/)
 
+
+## Licence
+
+This software is licensed under the [WTFPL](http://www.wtfpl.net/).
+
